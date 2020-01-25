@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include <string.h>
+
 
 void Prompt(int cycle) {
 
-    const char *clc = (const char *) '\033[2J';
     char newline = '\n';
+    const char *clc = (const char *) '\033[2J';
 
     if (cycle == 1) {
 
@@ -24,20 +24,21 @@ void Prompt(int cycle) {
 
 void GetCommand(char command[]) {
 
-    char * envp[] = { (char *) "PATH=/bin", 0};
+    char * envp[] = { (char *) "PATH=/usr/bin", 0};
 
     const char exitCall[] = "quit";
 
-    if (fork() != 0) {
-        wait(NULL);
-    } else {
+    if (strcmp(command,exitCall) == 0) {
 
+        printf("I quit.\n");
+        exit(EXIT_SUCCESS);
+
+    } else {
+        printf("I am not a quitter.\n");
         //execve(program,parameters,envp);
     }
 
-    if (strcmp(command,exitCall) == 0) {
-        exit(EXIT_SUCCESS);
-    }
+
 
 }
 
@@ -66,3 +67,9 @@ int main() {
 
     return EXIT_SUCCESS;
 }
+
+/*
+ * if (fork() != 0) {
+ *      wait(NULL);
+ * } else
+ */

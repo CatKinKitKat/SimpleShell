@@ -1,0 +1,3 @@
+void GetCommand(char command[])
+int PrintArguments(char command[])
+void makeArgVector(char command[], char *argVector[])
