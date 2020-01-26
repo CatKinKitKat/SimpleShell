@@ -71,9 +71,9 @@ int main() {
 
         Prompt(cycle);
 
-        fgets(command,1024,stdin);                                               // WHY NOT A PRINTF -> BECAUSE PRINTF SUCKS, IT IGNORES SPACES; my poor cin >> var;
+        fgets(command,1024,stdin);
         if ((strlen(command)>0) && (command[strlen(command)-1] == '\n')) {
-            command[strlen(command) - 1] = '\0';                                    // WHY THIS -> BECAUSE FGETS SUCKS, IT DOES NOT ADD A \0 (null); my poor cin >> var;
+            command[strlen(command) - 1] = '\0';
         }
 
         GetCommand(command);
