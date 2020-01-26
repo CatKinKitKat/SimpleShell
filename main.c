@@ -41,8 +41,6 @@ int PrintArguments(char command[]) {
 
 void GetCommand(char command[]) {
 
-    char * envp[] = { (char *) "PATH=/usr/bin", 0};
-
     const char exitCall[] = "quit";
 
     if (strcmp(command,exitCall)==0) {
@@ -51,13 +49,14 @@ void GetCommand(char command[]) {
         exit(EXIT_SUCCESS);
 
     } else {
-        //printf("%s", command);
         PrintArguments(command);
-        //execve(command,"",envp);
     }
 }
 
 void makeArgVector(char command[], char *argVector[]) {
+
+    char * envp[] = { (char *) "PATH=/usr/bin", 0};
+    //execve(command,"",envp);
 
 }
 
