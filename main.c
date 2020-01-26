@@ -8,6 +8,12 @@
 #define MAX_SIZE 16
 #define DELIMITER " \t\r\n\a"
 
+void changeCwd(char *where) {
+    static char cwd[BUFFER_SIZE];
+    chdir(where);
+    getcwd(cwd, sizeof(cwd));
+}
+
 void Prompt(int cycle) {
 
     char newline = '\n';
@@ -27,36 +33,42 @@ void Prompt(int cycle) {
 }
 
 int cdFunc(char **argVector) {
-    if (strcmp(argVector[1],"\0") == 0) {
+
+    if (strcmp(argVector[1], "\0") == 0) {
+
         printf("Specify where.\n");
     } else {
+
         if (chdir(argVector[1]) != 0) {
+
             printf("Command Failed.\n");
+        } else {
+            changeCwd(argVector[1]);
         }
     }
     return 1;
 }
 
 //Task 1-d
-int forkLauncher(char **argVector) {
+int launcher(char **argVector) {
 
     char *envp[] = {(char *) "PATH=/bin", 0};
     char path[MAX_SIZE] = "/bin/";
+    const char cd[] = "cd";
 
-    strcat(path,argVector[0]);
+    strcat(path, argVector[0]);
 
-    pid_t pid;
+    if (strcmp(argVector[0], cd) == 0) {
 
-    pid = fork();
-    if (pid == 0) {
-        if (execv(path, argVector) == -1) {
-            printf("No such command.");
-        }
-        return EXIT_FAILURE;
-    } else if (pid < 0) {
-        printf("Error Forking.\n");
+        cdFunc(argVector);
+        return EXIT_SUCCESS;
+
     } else {
-        wait(NULL);
+        if (execv(path, argVector) == -1) {
+
+            printf("No such command.");
+            return EXIT_SUCCESS;
+        }
     }
 
     return EXIT_SUCCESS;
@@ -71,9 +83,10 @@ void makeArgVector(char command[], char *argVector[]) {
     argVector[arg] = malloc(sizeof(token));
 
     while (token != NULL) {
-        //printf("%s\n", token);
+
         strcpy(argVector[arg], token);
-        printf("%s\n", argVector[arg]);
+        //printf("%s\n", argVector[arg]);
+
         arg++;
         token = strtok(NULL, DELIMITER);
         argVector[arg] = malloc(sizeof(token));
@@ -81,11 +94,7 @@ void makeArgVector(char command[], char *argVector[]) {
 
     argVector[arg + 1] = malloc(sizeof(token));
     strcpy(argVector[arg + 1], "\0");
-    printf("%s\n", argVector[arg+1]);
-
-    //printf("%i\n", arg);
-
-
+    printf("%s\n", argVector[arg + 1]);
 }
 
 //Task 1-b
@@ -111,9 +120,11 @@ int PrintArguments(char command[]) {
 //Task 1-a
 void GetCommand(char command[]) {
 
-    const char exitCall[] = "quit";
+    const char quitCall[] = "quit";
+    const char exitCall[] = "exit";
+    const char ls[] = "ls";
 
-    if (strcmp(command, exitCall) == 0) {
+    if (strcmp(command, quitCall) == 0 || strcmp(command, exitCall) == 0) {
         int children = getpid();
         printf("%i\n", children);
 
@@ -124,12 +135,20 @@ void GetCommand(char command[]) {
         printf("I quit.\n");
         exit(EXIT_SUCCESS);
 
-    } else {
+    } else if (strcmp(command, ls) == 0) {
 
-        char *argVector[MAX_SIZE];
-        makeArgVector(command, argVector);
-        forkLauncher(argVector);
+        char dir[BUFFER_SIZE];
+        getcwd(dir, sizeof(dir));
+
+        strcat(command, " ");
+        strcat(command, dir);
+
     }
+
+    char *argVector[MAX_SIZE];
+    makeArgVector(command, argVector);
+    launcher(argVector);
+
 }
 
 int main() {
@@ -137,19 +156,34 @@ int main() {
     int cycle = 0;
     char command[BUFFER_SIZE];
 
+    pid_t pid;
+
+    char initialDir[BUFFER_SIZE];
+    getcwd(initialDir, sizeof(initialDir));
+    changeCwd(initialDir);
+
     do {
         cycle++;
 
         Prompt(cycle);
 
-        fgets(command,1024,stdin);
-        if ((strlen(command)>0) && (command[strlen(command)-1] == '\n')) {
+        fgets(command, 1024, stdin);
+        if ((strlen(command) > 0) && (command[strlen(command) - 1] == '\n')) {
             command[strlen(command) - 1] = '\0';
         }
 
-        GetCommand(command);
+        pid = fork();
+        if (pid == 0) {
+            GetCommand(command);
+        } else if (pid < 0) {
+            printf("Error Forking.\n");
+            return EXIT_FAILURE;
+        } else {
+            wait(NULL);
+        }
 
     } while (cycle > 0);
+
 
     return EXIT_SUCCESS;
 }
