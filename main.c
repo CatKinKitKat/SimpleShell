@@ -165,17 +165,6 @@ void GetCommand(char command[]) {
 
 }
 
-char transformer(char c) {
-
-    if (c == '-') {
-        c = '-';
-    } else if (c == '/') {
-        c = '/';
-    }
-
-    return c;
-}
-
 char *scanLine(char *buffer) {
     int size = BUFFER_SIZE;
     char *p = buffer;
