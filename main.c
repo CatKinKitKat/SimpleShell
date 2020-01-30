@@ -6,7 +6,7 @@
 #include <limits.h>
 
 #define BUFFER_SIZE 64
-#define MAX_SIZE 16
+#define MAX_SIZE 8
 #define DELIMITER " \t\r\n\a"
 
 pid_t pid, old_pid;
@@ -68,22 +68,22 @@ int launcher(char **argVector) {
     char *envp[] = {(char *) "PATH=/bin", 0};
     const char cd[] = "cd";
 
+    //printf("%s\n",*argVector);
+
     if (strcmp(argVector[0], cd) == 0) {
 
         cdFunc(argVector);
-        flush();
         return EXIT_SUCCESS;
 
     } else {
         if (execvp(argVector[0], argVector) == -1) {
 
             printf("?\n");
-            flush();
             return EXIT_SUCCESS;
         }
     }
 
-    return EXIT_SUCCESS;
+    return EXIT_FAILURE;
 }
 
 //Task 1-c
@@ -92,7 +92,7 @@ void makeArgVector(char command[], char *argVector[]) {
     char *token;
     int arg = 0;
     token = strtok(command, DELIMITER);
-    argVector[arg] = malloc(sizeof(token));
+    argVector[arg] = (char*) calloc(sizeof(token), sizeof(char));
 
     while (token != NULL) {
 
@@ -101,12 +101,14 @@ void makeArgVector(char command[], char *argVector[]) {
 
         arg++;
         token = strtok(NULL, DELIMITER);
-        argVector[arg] = malloc(sizeof(token));
+        argVector[arg] = (char*) calloc(sizeof(token), sizeof(char));
     }
 
-    //argVector[arg + 1] = malloc(sizeof(token));
+    //argVector[arg] = (char*) realloc(argVector[arg],sizeof(char*));
     strcpy(argVector[arg], "\0");
-    //printf("%i\n%lu\n", arg, sizeof(argVector));
+    free(token);
+    //printf("%s\n",*argVector);
+    //printf("%s\n%lu\n", argVector[arg], sizeof(argVector));
 }
 
 //Task 1-b
@@ -119,7 +121,7 @@ int PrintArguments(char command[]) {
     token = strtok(command, DELIMITER);
 
     while (token != NULL) {
-        //printf("%s\n", token);
+        printf("%s\n", token);
         args++;
 
         token = strtok(NULL, DELIMITER);
@@ -158,9 +160,12 @@ void GetCommand(char command[]) {
     }
 
     //int size = PrintArguments(command) + 1;
-    char *argVector[MAX_SIZE];
-    makeArgVector(command, argVector);
-    launcher(argVector);
+    char argVector[MAX_SIZE][BUFFER_SIZE];
+    **argVector = *(char*) calloc(sizeof(argVector), sizeof(char));
+    makeArgVector(command, (char **) argVector);
+    //printf("%s\n",*argVector);
+    launcher((char **) argVector);
+    flush();
     //free(*argVector);
 
 }
@@ -194,7 +199,7 @@ int main() {
 
     do {
         char command[BUFFER_SIZE];
-        *command = malloc(BUFFER_SIZE);
+        //*command = malloc(BUFFER_SIZE);
 
         Prompt();
 
@@ -204,6 +209,8 @@ int main() {
             command[strlen(command) - 1] = '\0';
         }
 
+        if (strlen(command) <= 1) continue;
+
         pid = fork();
         if (pid == 0) {
             GetCommand(command);
@@ -212,7 +219,7 @@ int main() {
             return EXIT_FAILURE;
         } else {
             do {
-                waitpid(pid, &status, WUNTRACED);
+                old_pid = waitpid(pid, &status, WUNTRACED);
             } while (!WIFEXITED(status) && !WIFSIGNALED(status));
         }
 
