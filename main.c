@@ -7,29 +7,31 @@
 
 #define BUFFER_SIZE 1024
 #define MAX_SIZE 8
-#define DELIMITER " \t\r\n\a"
+#define DELIMITER " \t\r\n\a" //delimiters of strtok
 
+/*
+ * Current pid
+ *      +
+ * Current Directory
+ */
+pid_t pid;
 static char cwd[BUFFER_SIZE];
 
-void flush() {
-    fflush(stdin);
-    fflush(stdout);
-}
-
-void freeArgVector(char **argVector) {
-    for(int i = 0; i < sizeof(argVector) / sizeof(argVector[0]); i++){
-        free(argVector[i]);
-    }
-}
-
-void changeCwd(char *where) {
-    if (chdir(where) != 0) {
-        printf("Unknown location. Is that Narnia?\n");
+/*
+ * Change cureent Directory
+ */
+int changeCwd(char *where) {
+    if (chdir(where) != 0) { //change
+        return EXIT_FAILURE; //if cnt change
     } else {
-        getcwd(cwd, sizeof(cwd));
+        getcwd(cwd, sizeof(cwd)); //alter our var with dir
+        return EXIT_SUCCESS;
     }
 }
 
+/*
+ * Sets prompt with user@machine
+ */
 void Prompt() {
 
     char hostname[HOST_NAME_MAX];
@@ -40,153 +42,138 @@ void Prompt() {
 
     if (getlogin_r(username, HOST_NAME_MAX) == 0) {
 
-        strcat(prompt, (char *) username);
+        strcat(prompt, (char *) username); //get username if successful
         strcat(prompt, "@");
 
     }
     if (gethostname(hostname, HOST_NAME_MAX) == 0) {
 
-        strcat(prompt, hostname);
-        strcat(prompt, "> ");
-
-    } else {
-        strcpy(prompt, "> ");
-    }
-
-    printf("%s", prompt);
-
-}
-
-int cdFunc(char **argVector) {
-
-    if (strcmp(argVector[1], "\0") == 0) {
-
-        changeCwd(getenv("HOME"));
-        return EXIT_SUCCESS;
-
-    } else {
-
-        changeCwd(argVector[1]);
-        return EXIT_SUCCESS;
+        strcat(prompt, hostname);   //get machine if successful
 
     }
+        strcat(prompt, "> "); //default
+
+
+    printf("%s", prompt); //print
+
 }
 
 //Task 1-d
+/*
+ * Launches commands and takes care of processes (parent/children)
+ */
 int launcher(char **argVector) {
 
     const char quitCall[] = "quit";
     const char exitCall[] = "exit";
     const char cd[] = "cd";
 
-    if (strcmp(argVector[0], quitCall) == 0 || strcmp(argVector[0], exitCall) == 0) {
+    if (strcmp(argVector[0], quitCall) == 0 || strcmp(argVector[0], exitCall) == 0) { // exits quits, you know
 
-        int children = getpid();
-        for (int c = 0; c < children; c++) {
-            kill(c, SIGKILL);
-        }
-
-        printf("I quit.\n");
+        printf("Goodbye.\n"); //
         exit(EXIT_SUCCESS);
 
     } else if (strcmp(argVector[0], cd) == 0) {
 
-        cdFunc(argVector);
+        if (changeCwd(argVector[1])){
+            changeCwd(getenv("HOME")); // if error return home, home sweet home
+        }
         return EXIT_SUCCESS;
 
     }
 
-    pid_t pid;
+    pid = fork(); // new process?
 
-    pid = fork();
-
-    if (pid == 0) {
-
+    if (pid == 0) { // if not execute command
 
         if (execvp(argVector[0], argVector) == -1) {
 
-            printf("Unknown command. Is that elfish?\n");
-            freeArgVector(argVector);
+            printf("Unknown command. Is that elfish?\n"); //if our command fails to execute it most likely is missing or a typo
             return EXIT_FAILURE;
-        } else {
-
-            freeArgVector(argVector);
-            return EXIT_SUCCESS;
         }
-
 
     } else if (pid < 0) {
 
-        printf("Error forking.\n");
+        printf("Error forking.\n"); // a colleague advised
         exit(EXIT_FAILURE);
 
     } else {
-        while (pid == wait(NULL));
+        while (pid == wait(NULL)); // waits indefinitely for our child to finish
         return EXIT_SUCCESS;
     }
 }
 
 //Task 1-c
-void makeArgVector(char command[], char *argVector[]) {
+/*
+ * Creates a vector of arguments for our command
+ */
+void makeArgVector(char *command, char **argVector) {
 
     char *token;
     int arg = 0;
-    token = strtok(command, DELIMITER);
-    argVector[arg] = (char *) calloc(sizeof(token), sizeof(char));
+    token = strtok(command, DELIMITER); //first token
+    argVector[arg] = (char *) calloc(sizeof(token), sizeof(char)); //calloc is so much better than malloc! it allocates and clears mem
 
     while (token != NULL) {
 
-        strcpy(argVector[arg], token);
+        strcpy(argVector[arg], token); //copy token
 
         arg++;
-        token = strtok(NULL, DELIMITER);
-        argVector[arg] = (char *) calloc(sizeof(token), sizeof(char));
+        token = strtok(NULL, DELIMITER); // next
+        argVector[arg] = (char *) calloc(sizeof(token), sizeof(char)); // allocate next
     }
 
-    strcpy(argVector[arg], (const char *) "\0");
-    free(token);
+    argVector[arg] = (char *) NULL; // THIS WAS THE CULPRIT (I WAS USING STRCPY AND IT WAS A ****STORM)
+    free(token); //frees mem
 }
 
 //Task 1-b
-int PrintArguments(char command[]) {
+/*
+ * Prints our arguments. It is the base of our makeArgVect
+ */
+int PrintArguments(char *command) {
 
     char *token;
     int args = 0;
 
-    token = strtok(command, DELIMITER);
+    token = strtok(command, DELIMITER); //first token
 
     while (token != NULL) {
         printf("%s\n", token);
         args++;
 
-        token = strtok(NULL, DELIMITER);
+        token = strtok(NULL, DELIMITER); //next
     }
     printf("%i\n", args);
-    free(token);
+    free(token); //frees mem
 
     return EXIT_SUCCESS;
 }
 
-void parseCommand(char command[]) {
+/*
+ * Parses our command to take care of ls, although we could have used launcher or cd here this was easier
+ */
+void parseCommand(char *command) {
 
     const char ls[] = "ls";
 
-    if (strcmp(command, ls) == 0) {
+    if (strcmp(command, ls) == 0) { //if ls is empty -> ls the current directory
 
         strcat(command, " ");
         strcat(command, cwd);
 
     }
 
-    char argVector[MAX_SIZE][BUFFER_SIZE];
-    **argVector = *(char *) calloc(sizeof(argVector), sizeof(char));
+    char *argVector[BUFFER_SIZE]; //create our argVect
     makeArgVector(command, (char **) argVector);
 
-    launcher((char **) argVector);
-    flush();
+    launcher((char **) argVector); //executes
 }
 
 // Task 1-a
+/*
+ * scanf hates spaces, fgets hates special chars, this was a ugly solution for a ugly problem
+ */
 char *scanLine(char *buffer) {
     int size = BUFFER_SIZE;
     char *p = buffer;
@@ -209,7 +196,10 @@ char *scanLine(char *buffer) {
 }
 
 // Task 1-a
-void GetCommand(char command[]) {
+/*
+ * Gets our command and removes any \n if somehow it passed through my "scanLine great wall of trump"
+ */
+void GetCommand(char *command) {
 
     scanLine(command);
     if ((strlen(command) > 0) && (command[strlen(command) - 1] == '\n')) {
@@ -217,21 +207,24 @@ void GetCommand(char command[]) {
     }
 }
 
+/*
+ * Starts here, infinite loop like a good shell
+ */
 int main() {
 
-    changeCwd(getenv("HOME"));
+    changeCwd(getenv("HOME")); //Start at home
+    char *command = calloc(BUFFER_SIZE, sizeof(char)); //Allocates mem like malloc but better, it clears it
 
     do {
-        char command[BUFFER_SIZE];
-        *command = calloc(sizeof(BUFFER_SIZE), sizeof(char));
+        *command = realloc(command, BUFFER_SIZE * sizeof(char)); //Reallocates every iteration
 
-        Prompt();
+        Prompt(); //user@machine>
 
         GetCommand(command);
 
-        if (strlen(command) <= 0) continue;
+        if (strlen(command) <= 0) continue; //If it is empty skip
 
-        parseCommand(command);
+        parseCommand(command); //Parses and executes
 
     } while (1);
 
