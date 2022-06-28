@@ -1,0 +1,13 @@
+= SimpleShell
+
+One of the projects for my SO (Operating Systems) course. It's not that good, in fact I think it's awful, my first-ish time with low level stuff, pointerrs, memory and so on. Got lucky and the project was simple AF.
+
+== Description
+
+It's self-explanatory.
+
+It is a simple shell written in C. It executes commands and prints results. Currently it does not have | ; < << > >> because, you know... It's a simple shell. Simple.
+
+=== Extra
+
+If you are at Uni. feel free to use my content.
